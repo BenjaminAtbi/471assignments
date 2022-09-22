@@ -8,7 +8,7 @@ BUILDDIR=build
 all: dir server client
 
 dir:
-	mkdir $(BUILDDIR)
+	mkdir -p $(BUILDDIR)
 
 server: $(BUILDDIR)/server.o
 	$(CC) $(BUILDDIR)/server.o -o $(BUILDDIR)/server
