@@ -40,11 +40,11 @@ int main(int argc, char **argv)
 
     while ( (n = read(sockfd, recvline, MAXLINE)) > 0) {
         recvline[n] = 0;        /* null terminate */
-        if (fputs(recvline, stdout) == EOF) {
-            printf("fputs error\n");
-            exit(1);
-        }
+        message msg;
+        readMessage(&msg, recvline);
+        printMessage(&msg);   
     }
+
     if (n < 0) {
         printf("read error\n");
         exit(1);
@@ -64,6 +64,7 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
     }
     addrmatch = regexec(&regex, argument, 0, NULL, 0);
 
+    //match address pattern
     if(addrmatch == 0){
         char hbuf[NI_MAXHOST];
         constructServaddr(servaddr, argument, atoi(port));
@@ -77,6 +78,7 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
         return 0;
     }
 
+    //doesn't match address pattern
     if(addrmatch == REG_NOMATCH){
         struct addrinfo* addr_info_res;
         struct addrinfo hints;
@@ -114,4 +116,13 @@ void constructServaddr(struct sockaddr_in* servaddr,  char* address, int port) {
         printf("inet_pton error for %s\n", address);
         exit(1);
     }
+}
+
+void readMessage(message* msg, char* recvbuff){
+    msg->addrlen = recvbuff[0];
+    msg->timelen = recvbuff[4];
+    msg->msglen = recvbuff[8];
+    memcpy(msg->addr,recvbuff + sizeof(int)*3, msg->addrlen);
+    memcpy(msg->currtime,recvbuff + sizeof(int)*3 + msg->addrlen, msg->timelen);
+    strcpy(msg->payload,recvbuff + sizeof(int)*3 + msg->addrlen + msg->timelen);
 }

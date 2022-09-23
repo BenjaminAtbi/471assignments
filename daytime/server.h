@@ -1,9 +1,9 @@
 #ifndef __SERVER_H
 #define __SERVER_H
+#include "common.h"
 
-#define MAXLINE     4096    /* max text line length */
-#define LISTENQ     1024    /* 2nd argument to listen() */
+void initializeMessage(message* msg, char* addr, char* currtime, char* payload);
 
-void printInit(struct sockaddr_in servaddr);
+int writeMessage(int fd, message* msg);
 
-#endif // __SERVERE_H
+#endif // __SERVER_H
