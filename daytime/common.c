@@ -62,9 +62,9 @@ void constructSockAddr(struct sockaddr_in* sockaddr,  char* address, int port) {
 }
 
 int nameFromAddress(char* address, char* port, char* hostname, int hostnamelen){
-    struct sockaddr_in* sockaddr;
-    constructSockAddr(sockaddr, address, atoi(port));
-    if (getnameinfo((struct sockaddr *)sockaddr, sizeof(*sockaddr), 
+    struct sockaddr_in nameaddr;
+    constructSockAddr(&nameaddr, address, atoi(port));
+    if (getnameinfo((struct sockaddr *) &nameaddr, sizeof(nameaddr), 
             hostname, hostnamelen, NULL, 0, 0) < 0) {
         printf("failed to find server hostname\n");
         return -1;

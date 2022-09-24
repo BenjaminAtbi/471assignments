@@ -52,18 +52,16 @@ int main(int argc, char **argv)
         }
         recvline[n] = 0;        /* null terminate */
         readMessage(&incoming_msg, recvline);
-        dumpMessage(&incoming_msg);
 
-        printf("opening socket\n");
+        printf("received request from client\n");
+
         if ( (servfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
             printf("socket error\n");
             exit(1);
         }
-        
-        printf("open socket\n");
 
-        printf("|%s|%i|\n",incoming_msg.addr, atoi(incoming_msg.payload));
         constructSockAddr(&serveraddr, incoming_msg.addr, atoi(incoming_msg.payload));
+        printf("forwarding request to server at %s:%s\n", incoming_msg.addr,incoming_msg.payload);
 
         if (connect(servfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) {
             printf("error connecting to server\n");
@@ -72,8 +70,7 @@ int main(int argc, char **argv)
 
         while ( (n = read(servfd, recvline, MAXLINE)) > 0) {
             recvline[n] = 0;        /* null terminate */
-            readMessage(&return_msg, recvline);
-            dumpMessage(&return_msg);   
+            readMessage(&return_msg, recvline); 
         }
 
         if (n < 0) {
@@ -85,6 +82,8 @@ int main(int argc, char **argv)
             printf("error writing message back to client\n");
             exit(1);
         } 
+
+        printf("received response from server and forwarded to client\n");
         close(clientfd);
     }
 }

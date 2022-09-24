@@ -57,6 +57,7 @@ int main(int argc, char **argv)
         }
     //If tunnel, ping server through it
     } else {
+
         if(parseArgs(tunnel_addr_arg, tunnel_port_arg, &tunneladdr, tunnel_hostname) < 0) {
             printf("unable to find tunnel by given hostname/address\n");
             exit(1);
@@ -79,7 +80,6 @@ int main(int argc, char **argv)
             printf("error writing message to tunnel\n");
             exit(1);
         } 
-        printf("sent message to tunnel\n");
     }
 
     //pick up response from server or tunnel
@@ -87,7 +87,11 @@ int main(int argc, char **argv)
         recvline[n] = 0;        /* null terminate */
         message msg;
         readMessage(&msg, recvline);
-        printResult(&msg, &servaddr, server_hostname);   
+        if(argc == 3){
+            printResult(&msg, &servaddr, server_hostname); 
+        } else {
+            printResultTunnel(&msg, &servaddr, server_hostname, &tunneladdr, tunnel_hostname, tunnel_port_arg); 
+        }
     }
 
     if (n < 0) {
@@ -111,13 +115,13 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
 
     //match address pattern
     if(addrmatch == 0){
-        printf("getting hostname:\n");
+
         if(nameFromAddress(argument, port, hostname, MAXLINE) < 0){
             printf("error getting hostname\n");
             return -1;
         }
+
         constructSockAddr(servaddr, argument, atoi(port));
-        printf("found hostname: %s\n", hostname);
         return 0;
     }
 
@@ -140,7 +144,6 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
 
         char msgbuf[MAXLINE];
         inet_ntop(AF_INET, &servaddr->sin_addr, msgbuf, MAXLINE);
-        printf("found address: %s\n", msgbuf);
         return 0;
     }
 
@@ -158,5 +161,21 @@ void printResult(message* msg, struct sockaddr_in* servaddr, char* hostname){
     printf("Server Name: %s\n", hostname);
     printf("IP Address: %s\n", addrbuf);
     printf("Time: %s\n", msg->currtime);
+    printf("who: %s\n", msg->payload);
+}
+
+void printResultTunnel(message* msg, struct sockaddr_in* servaddr, char* servname, struct sockaddr_in* tunneladdr, char* tunnelname, char* tunnelport){
+    
+    char servaddrbuf[MAXLINE];
+    inet_ntop(AF_INET, &servaddr->sin_addr, servaddrbuf, MAXLINE);
+    char tunneladdrbuf[MAXLINE];
+    inet_ntop(AF_INET, &tunneladdr->sin_addr, tunneladdrbuf, MAXLINE);
+
+    printf("Server Name: %s\n", servname);
+    printf("IP Address: %s\n", servaddrbuf);
+    printf("Time: %s\n\n", msg->currtime);
+    printf("Via Tunnel: %s\n", tunnelname);
+    printf("IP Address: %s\n", tunneladdrbuf);
+    printf("Port Number: %s\n\n", tunnelport);
     printf("who: %s\n", msg->payload);
 }
