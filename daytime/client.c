@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <time.h>
 #include <stdlib.h>
 #include <strings.h>
 #include <stdio.h>
@@ -17,14 +18,28 @@ int main(int argc, char **argv)
     int sockfd, n;
     char recvline[MAXLINE + 1];
     struct sockaddr_in servaddr;
-    char hostname[MAXLINE];
+    struct sockaddr_in tunneladdr;
+    char server_hostname[MAXLINE];
+    char tunnel_hostname[MAXLINE];
+    char* serv_addr_arg;
+    char* serv_port_arg;
+    char* tunnel_addr_arg;
+    char* tunnel_port_arg;
 
-    if (argc != 3) {
-        printf("usage: client <Hostname/IP_address> <port_number>\n");
+    if (argc == 3){
+        serv_addr_arg = argv[1];
+        serv_port_arg = argv[2];
+    } else if (argc == 5){
+        tunnel_addr_arg = argv[1];
+        tunnel_port_arg = argv[2];
+        serv_addr_arg = argv[3];
+        serv_port_arg = argv[4];
+    } else {
+        printf("usage: client <Server Hostname/IP_address> <Server port_number> or client <Tunnel Hostname/IP_address> <Tunnel port_number> <Server Hostname/IP_address> <Server port_number>\n");
         exit(1);
     }
 
-    if( parseArgs(argv[1], argv[2], &servaddr, hostname) < 0) {
+    if( parseArgs(serv_addr_arg, serv_port_arg, &servaddr, server_hostname) < 0) {
         printf("unable to find server by given hostname/address\n");
         exit(1);
     }
@@ -34,16 +49,45 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-        printf("connect error\n");
-        exit(1);
+    //If no tunnel, ping server
+    if(argc == 3) {
+        if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
+            printf("connect error with server\n");
+            exit(1);
+        }
+    //If tunnel, ping server through it
+    } else {
+        if(parseArgs(tunnel_addr_arg, tunnel_port_arg, &tunneladdr, tunnel_hostname) < 0) {
+            printf("unable to find tunnel by given hostname/address\n");
+            exit(1);
+        }
+
+        if (connect(sockfd, (struct sockaddr *) &tunneladdr, sizeof(tunneladdr)) < 0) {
+            printf("connect error with tunnel\n");
+            exit(1);
+        }
+
+        message msg;
+        char addrbuff[MAXLINE];
+        char timebuff[MAXLINE];
+        time_t ticks = time(NULL);
+        snprintf(timebuff, MAXLINE, "%.24s", ctime(&ticks));
+        inet_ntop(AF_INET, &servaddr.sin_addr, addrbuff, MAXLINE);
+
+        initializeMessage(&msg, addrbuff, timebuff, serv_port_arg);
+        if( writeMessage(sockfd, &msg) < 0) {
+            printf("error writing message to tunnel\n");
+            exit(1);
+        } 
+        printf("sent message to tunnel\n");
     }
 
+    //pick up response from server or tunnel
     while ( (n = read(sockfd, recvline, MAXLINE)) > 0) {
         recvline[n] = 0;        /* null terminate */
         message msg;
         readMessage(&msg, recvline);
-        printResult(&msg, &servaddr, hostname);   
+        printResult(&msg, &servaddr, server_hostname);   
     }
 
     if (n < 0) {
@@ -69,11 +113,11 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
     if(addrmatch == 0){
         printf("getting hostname:\n");
         if(nameFromAddress(argument, port, hostname, MAXLINE) < 0){
-            printf("error getting server hostname\n");
+            printf("error getting hostname\n");
             return -1;
         }
         constructSockAddr(servaddr, argument, atoi(port));
-        printf("found server hostname: %s\n", hostname);
+        printf("found hostname: %s\n", hostname);
         return 0;
     }
 
@@ -87,7 +131,7 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
         hints.ai_socktype = SOCK_STREAM;
         
         if(getaddrinfo(argument, port, &hints, &addr_info_res) < 0) {
-            printf("failed to find server address\n");
+            printf("failed to find address\n");
             return -1;
         }
         memcpy(servaddr, addr_info_res->ai_addr, sizeof(*addr_info_res->ai_addr));
@@ -96,7 +140,7 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
 
         char msgbuf[MAXLINE];
         inet_ntop(AF_INET, &servaddr->sin_addr, msgbuf, MAXLINE);
-        printf("found server address: %s\n", msgbuf);
+        printf("found address: %s\n", msgbuf);
         return 0;
     }
 
@@ -105,15 +149,6 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
     fprintf(stderr, "Regex match failed: %s\n", msgbuf);
     return -1;
 
-}
-
-void readMessage(message* msg, char* recvbuff){
-    memcpy(&msg->addrlen, &recvbuff[0], sizeof(int));
-    memcpy(&msg->timelen, &recvbuff[sizeof(int)], sizeof(int));
-    memcpy(&msg->msglen, &recvbuff[sizeof(int)*2], sizeof(int));
-    memcpy(msg->addr,recvbuff + sizeof(int)*3, msg->addrlen);
-    memcpy(msg->currtime,recvbuff + sizeof(int)*3 + msg->addrlen, msg->timelen);
-    strcpy(msg->payload,recvbuff + sizeof(int)*3 + msg->addrlen + msg->timelen);
 }
 
 void printResult(message* msg, struct sockaddr_in* servaddr, char* hostname){

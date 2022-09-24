@@ -13,6 +13,12 @@ typedef struct message{
 
 void dumpMessage(message* msg);
 
+int writeMessage(int fd, message* msg);
+
+void readMessage(message* msg, char* recvbuff);
+
+void initializeMessage(message* msg, char* addr, char* currtime, char* payload);
+
 void constructSockAddr(struct sockaddr_in* servaddr,  char* address, int port);
 
 int nameFromAddress(char* address, char* port, char* hostname, int hostnamelen);

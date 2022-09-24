@@ -29,15 +29,15 @@ int main(int argc, char **argv)
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(atoi(argv[1])); /* daytime server */
+    servaddr.sin_port = htons(atoi(argv[1]));
 
     bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
-
     listen(listenfd, LISTENQ);
 
     printf("Server is open on port: %i\n", ntohs(servaddr.sin_port));
 
     for ( ; ; ) {
+
         bzero(&clientaddr, sizeof(clientaddr));
         clientlen = sizeof(clientaddr);
         connfd = accept(listenfd, &clientaddr, &clientlen);
@@ -61,15 +61,6 @@ int main(int argc, char **argv)
     }
 } 
 
-void initializeMessage(message* msg, char* addr, char* currtime, char* payload) {
-    msg->addrlen = strlen(addr);
-    msg->timelen = strlen(currtime);
-    strncpy(msg->addr, addr, strlen(addr));
-    strncpy(msg->currtime, currtime, strlen(currtime));
-    strncpy(msg->payload, payload, strlen(payload));
-    msg->msglen = 3*sizeof(int) + strlen(addr) + strlen(currtime) + strlen(payload);
-} 
-
 int runWhoCmd(char* output){
     FILE* fp;
     char buf[MAXLINE];
@@ -91,30 +82,18 @@ int runWhoCmd(char* output){
     return 0;
 }
 
-int writeMessage(int fd, message* msg) {
-    char buff[MAXLINE];
-
-    if(msg->msglen > MAXLINE) {
-        printf("message is too large to send\n");
-        return -1;
-    }
-    memcpy(buff, &msg->addrlen, sizeof(int));
-    memcpy(buff + sizeof(int), &msg->timelen, sizeof(int));
-    memcpy(buff + sizeof(int)*2, &msg->msglen, sizeof(int));
-    snprintf( buff + sizeof(int)*3, MAXLINE-sizeof(int)*3, "%s%s%s", msg->addr, msg->currtime, msg->payload);
-    if(write(fd, buff, msg->msglen) < 0){
-        printf("error writing message to socket\n");
-        return -1;
-    }
-
-    return 0;
-}
-
 int printClient(struct sockaddr* clientaddr, char* port){
+
     char addrbuf[MAXLINE];
     char namebuf[MAXLINE];
+    printf("DEBUG: before ntop\n");
     inet_ntop(AF_INET, &clientaddr->sa_data, addrbuf, MAXLINE);
-    nameFromAddress(addrbuf, port, namebuf, MAXLINE);
+    printf("DEBUG: after ntop\n");
+
+    if(nameFromAddress(addrbuf, port, namebuf, MAXLINE) < 0) {
+        printf("error getting name from address\n");
+        return -1;
+    }
     printf("Receiving Request\n");
     printf("Client IP Address: %s\n", addrbuf);
     printf("Client Hostname: %s\n", namebuf);
