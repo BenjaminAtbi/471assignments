@@ -1,4 +1,6 @@
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <time.h>
@@ -13,6 +15,8 @@ int main(int argc, char **argv)
 {
     int listenfd, connfd;
     struct sockaddr_in servaddr;
+    struct sockaddr clientaddr;
+    socklen_t clientlen;
     time_t ticks;
 
     if (argc != 2) {
@@ -34,9 +38,13 @@ int main(int argc, char **argv)
     printf("Server is open on port: %i\n", ntohs(servaddr.sin_port));
 
     for ( ; ; ) {
-        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+        bzero(&clientaddr, sizeof(clientaddr));
+        clientlen = sizeof(clientaddr);
+        connfd = accept(listenfd, &clientaddr, &clientlen);
         ticks = time(NULL);
         
+        printClient(&clientaddr, argv[1]);
+
         message msg; 
         char addrbuff[MAXLINE];
         char timebuff[MAXLINE];
@@ -44,10 +52,10 @@ int main(int argc, char **argv)
 
         snprintf(addrbuff, MAXLINE, "test");
         snprintf(timebuff, MAXLINE, "%.24s", ctime(&ticks));
-        snprintf(payloadbuff, MAXLINE, "shit");
+        if(runWhoCmd(payloadbuff) < 0) exit(1); 
 
         initializeMessage(&msg, addrbuff, timebuff, payloadbuff);
-        writeMessage(connfd, &msg);
+        if(writeMessage(connfd, &msg) < 0) exit(1);
 
         close(connfd);
     }
@@ -62,6 +70,27 @@ void initializeMessage(message* msg, char* addr, char* currtime, char* payload) 
     msg->msglen = 3*sizeof(int) + strlen(addr) + strlen(currtime) + strlen(payload);
 } 
 
+int runWhoCmd(char* output){
+    FILE* fp;
+    char buf[MAXLINE];
+    bzero(output, MAXLINE);
+
+    fp = popen("who", "r");
+    if(fp == NULL){
+        printf("error opening pipe for who command\n");
+        return -1;
+    }
+
+    while(fgets(buf, MAXLINE, fp) != NULL){
+        if(strlen(output) + strlen(buf) >= MAXLINE){
+            printf("command output exceeds capacity");
+            return -1;
+        }
+        strcat(output,buf);
+    }
+    return 0;
+}
+
 int writeMessage(int fd, message* msg) {
     char buff[MAXLINE];
 
@@ -73,12 +102,21 @@ int writeMessage(int fd, message* msg) {
     memcpy(buff + sizeof(int), &msg->timelen, sizeof(int));
     memcpy(buff + sizeof(int)*2, &msg->msglen, sizeof(int));
     snprintf( buff + sizeof(int)*3, MAXLINE-sizeof(int)*3, "%s%s%s", msg->addr, msg->currtime, msg->payload);
-    
-    printf("about to send.\n");
-    printMessage(msg);
+    if(write(fd, buff, msg->msglen) < 0){
+        printf("error writing message to socket\n");
+        return -1;
+    }
 
-    write(fd, buff, msg->msglen);
-    printf("Sending response: %s", buff);
+    return 0;
+}
 
+int printClient(struct sockaddr* clientaddr, char* port){
+    char addrbuf[MAXLINE];
+    char namebuf[MAXLINE];
+    inet_ntop(AF_INET, &clientaddr->sa_data, addrbuf, MAXLINE);
+    nameFromAddress(addrbuf, port, namebuf, MAXLINE);
+    printf("Receiving Request\n");
+    printf("Client IP Address: %s\n", addrbuf);
+    printf("Client Hostname: %s\n", namebuf);
     return 0;
 }

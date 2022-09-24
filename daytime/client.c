@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include <errno.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -16,7 +17,7 @@ int main(int argc, char **argv)
     int sockfd, n;
     char recvline[MAXLINE + 1];
     struct sockaddr_in servaddr;
-    char hostname[NI_MAXHOST];
+    char hostname[MAXLINE];
 
     if (argc != 3) {
         printf("usage: client <Hostname/IP_address> <port_number>\n");
@@ -42,11 +43,11 @@ int main(int argc, char **argv)
         recvline[n] = 0;        /* null terminate */
         message msg;
         readMessage(&msg, recvline);
-        printMessage(&msg);   
+        printResult(&msg, &servaddr, hostname);   
     }
 
     if (n < 0) {
-        printf("read error\n");
+        printf("read error %i\n", errno);
         exit(1);
     }
 
@@ -66,14 +67,12 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
 
     //match address pattern
     if(addrmatch == 0){
-        char hbuf[NI_MAXHOST];
-        constructServaddr(servaddr, argument, atoi(port));
-        if (getnameinfo((struct sockaddr *)servaddr, sizeof(*servaddr), 
-                hbuf, sizeof(hbuf), NULL, 0, 0) < 0) {
-            printf("failed to find server hostname\n");
+        printf("getting hostname:\n");
+        if(nameFromAddress(argument, port, hostname, MAXLINE) < 0){
+            printf("error getting server hostname\n");
             return -1;
         }
-        memcpy(hostname, hbuf, strlen(hbuf)+1);
+        constructSockAddr(servaddr, argument, atoi(port));
         printf("found server hostname: %s\n", hostname);
         return 0;
     }
@@ -92,7 +91,7 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
             return -1;
         }
         memcpy(servaddr, addr_info_res->ai_addr, sizeof(*addr_info_res->ai_addr));
-        hostname = argument;
+        strcpy(hostname, argument);
         freeaddrinfo(addr_info_res);
 
         char msgbuf[MAXLINE];
@@ -108,21 +107,21 @@ int parseArgs(char* argument, char* port, struct sockaddr_in* servaddr, char* ho
 
 }
 
-void constructServaddr(struct sockaddr_in* servaddr,  char* address, int port) {
-    bzero(servaddr, sizeof(*servaddr));
-    servaddr->sin_family = AF_INET;
-    servaddr->sin_port = htons(port);  /* daytime server */
-    if (inet_pton(AF_INET, address, &(servaddr->sin_addr)) <= 0) {
-        printf("inet_pton error for %s\n", address);
-        exit(1);
-    }
-}
-
 void readMessage(message* msg, char* recvbuff){
-    msg->addrlen = recvbuff[0];
-    msg->timelen = recvbuff[4];
-    msg->msglen = recvbuff[8];
+    memcpy(&msg->addrlen, &recvbuff[0], sizeof(int));
+    memcpy(&msg->timelen, &recvbuff[sizeof(int)], sizeof(int));
+    memcpy(&msg->msglen, &recvbuff[sizeof(int)*2], sizeof(int));
     memcpy(msg->addr,recvbuff + sizeof(int)*3, msg->addrlen);
     memcpy(msg->currtime,recvbuff + sizeof(int)*3 + msg->addrlen, msg->timelen);
     strcpy(msg->payload,recvbuff + sizeof(int)*3 + msg->addrlen + msg->timelen);
+}
+
+void printResult(message* msg, struct sockaddr_in* servaddr, char* hostname){
+    char addrbuf[MAXLINE];
+    inet_ntop(AF_INET, &servaddr->sin_addr, addrbuf, MAXLINE);
+    
+    printf("Server Name: %s\n", hostname);
+    printf("IP Address: %s\n", addrbuf);
+    printf("Time: %s\n", msg->currtime);
+    printf("who: %s\n", msg->payload);
 }

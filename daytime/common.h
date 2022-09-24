@@ -11,6 +11,10 @@ typedef struct message{
     char payload[MAXLINE];
 } message;
 
-void printMessage(message* msg);
+void dumpMessage(message* msg);
+
+void constructSockAddr(struct sockaddr_in* servaddr,  char* address, int port);
+
+int nameFromAddress(char* address, char* port, char* hostname, int hostnamelen);
 
 #endif // __COMMON_H
