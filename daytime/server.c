@@ -88,12 +88,12 @@ int printClient(struct sockaddr* clientaddr, char* port){
     char namebuf[MAXLINE];
     inet_ntop(AF_INET, &clientaddr->sa_data, addrbuf, MAXLINE);
 
-    if(nameFromAddress(addrbuf, port, namebuf, MAXLINE) < 0) {
-        printf("error getting name from address\n");
-        return -1;
-    }
+    // if(nameFromAddress(addrbuf, port, namebuf, MAXLINE) < 0) {
+    //     printf("error getting name from address\n");
+    //     return -1;
+    // }
     printf("Receiving Request\n");
     printf("Client IP Address: %s\n", addrbuf);
-    printf("Client Hostname: %s\n", namebuf);
+    printf("Client Hostname: %s\n", addrbuf);
     return 0;
 }
