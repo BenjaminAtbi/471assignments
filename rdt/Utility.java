@@ -12,7 +12,8 @@ import java.util.*;
 public class Utility {
 	
 	public static final int MAX_NETWORK_DELAY = 200; // msec
-	
+	public static boolean corruption = false;
+
 	public static void udp_send (RDTSegment seg, DatagramSocket socket, 
 			InetAddress ip, int port) {
 			
@@ -29,7 +30,14 @@ public class Utility {
 		seg.makePayload(payload);
 	
 		// corrupt some bits
-		
+		if (corruption == true)
+		{
+			payload[Math.min(1, payload.length-1)] += 3;
+			payload[Math.min(16, payload.length-1)] += 3;
+			payload[Math.min(25, payload.length-1)] += 3;
+			payload[Math.min(32, payload.length-1)] += 3;
+		}
+
 		// send over udp
 		// simulate random network delay
 		int delay = RDT.random.nextInt(MAX_NETWORK_DELAY);
@@ -55,7 +63,7 @@ public class Utility {
 		data[idx++] = (byte) ((intValue & 0xFF000000) >> 24);
 		data[idx++] = (byte) ((intValue & 0x00FF0000) >> 16);
 		data[idx++] = (byte) ((intValue & 0x0000FF00) >> 8);
-		data[idx]   = (byte) (intValue & 0x000000FF);	
+		data[idx]   = (byte) (intValue & 0x000000FF);
 	}
 	
 	public static void shortToByte(short shortValue, byte[] data, int idx) 
@@ -69,7 +77,7 @@ public class Utility {
 	public static int byteToInt(byte[] data, int idx)
 	{
 		int intValue = 0, intTmp = 0;
-		
+
 		if ( ((int) data[idx]) < 0 ) { //leftmost bit (8th bit) is 1
 			intTmp = 0x0000007F & ( (int) data[idx]);
 			intTmp += 128;  // add the value of the masked bit: 2^7
@@ -103,7 +111,22 @@ public class Utility {
 		} else
 			intTmp = 0x000000FF & ((int) data[idx]);
 		intValue |= intTmp;
-		//System.out.println(" byteToInt: " + intValue + "  " + intTmp);
+//		System.out.println(" byteToInt: " + intValue + "  " + intTmp);
 		return intValue;
-	}		
+	}
+
+	public static byte[] subArray(byte[] orig, int index ,int length )
+	{
+		byte[] temp = null ;
+		if (index < orig.length)
+		{
+			length = Math.min(length, orig.length - index );
+			temp = new byte[length] ;
+			for(int i = 0 ;i < length ;i++ )
+			{
+				temp[i] = orig[index + i] ;
+			}
+		}
+		return temp;
+	}
 }
