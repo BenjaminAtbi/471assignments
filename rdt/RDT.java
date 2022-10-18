@@ -162,7 +162,11 @@ class ReceiverThread extends Thread {
 			RDTSegment seg = new RDTSegment();
 			makeSegment(seg, payload);
 			System.out.println("ReceiverThread received segment: "+seg);
-			//checksum
+
+			if(!seg.isValid()){
+				System.out.println("Received invalid segment");
+				continue;
+			}
 
 			if(seg.containsAck()){
 				Ack(seg);

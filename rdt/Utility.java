@@ -27,6 +27,8 @@ public class Utility {
 		// prepare UDP payload 
 		int payloadSize = seg.length + RDTSegment.HDR_SIZE;
 		byte[] payload = new byte[payloadSize];
+
+		seg.checksum = seg.computeChecksum();
 		seg.makePayload(payload);
 	
 		// corrupt some bits

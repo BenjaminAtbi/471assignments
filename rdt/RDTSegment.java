@@ -68,12 +68,14 @@ public class RDTSegment {
 	}
 
 	public int computeChecksum() {
-		// complete
-		return 0;
+		int sum = seqNum + ackNum + flags + rcvWin + length;
+		for(byte i : data){
+			sum += i;
+		}
+		return sum;
 	}
-	public boolean isValid() {
-		// complete
-		return true;
+	public boolean isValid(){
+		return checksum == computeChecksum();
 	}
 
 	public void setData(byte[] data_buf) {
@@ -100,7 +102,7 @@ public class RDTSegment {
 
 	// converts this seg to a series of bytes
 	public int makePayload(byte[] payload) {
-		// add header 
+		// add header
 		Utility.intToByte(seqNum, payload, SEQ_NUM_OFFSET);
 		Utility.intToByte(ackNum, payload, ACK_NUM_OFFSET);
 		Utility.intToByte(flags, payload, FLAGS_OFFSET);
@@ -110,6 +112,7 @@ public class RDTSegment {
 		//add data
 		for (int i=0; i<length; i++)
 			payload[i+HDR_SIZE] = data[i];
+
 
 		return HDR_SIZE + length;
 	}
