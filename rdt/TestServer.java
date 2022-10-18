@@ -33,7 +33,7 @@ public class TestServer {
 	private static void scenario1(String hostname, int dst_port, int local_port) {
 
 		RDT rdt = new RDT(hostname, dst_port, local_port, 3, 3, RDT.GBN);
-		RDT.setLossRate(0.0);
+		RDT.setLossRate(0.3);
 		byte[] buf = new byte[500];
 		System.out.println("Server is waiting to receive ... ");
 

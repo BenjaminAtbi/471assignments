@@ -36,7 +36,7 @@ public class TestClient {
 	public static void scenario1(String hostname, int dst_port, int local_port){
 
 		RDT rdt = new RDT(hostname, dst_port, local_port, 1, 3, RDT.GBN);
-		RDT.setLossRate(0.0);
+		RDT.setLossRate(0.3);
 
 		byte[] buf = new byte[RDT.MSS];
 		byte[] data = new byte[20];
@@ -58,7 +58,7 @@ public class TestClient {
 	public static void scenario2(String hostname, int dst_port, int local_port){
 
 		RDT rdt = new RDT(hostname, dst_port, local_port, 3, 3, RDT.GBN);
-		RDT.setLossRate(0.0);
+		RDT.setLossRate(0.3);
 
 		byte[] buf = new byte[RDT.MSS];
 		byte[] data = new byte[10];

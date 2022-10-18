@@ -7,6 +7,7 @@ package rdt;
 
 import java.io.*;
 import java.net.*;
+import java.sql.Array;
 import java.sql.Time;
 import java.util.*;
 import java.util.concurrent.*;
@@ -97,16 +98,13 @@ public class RDT {
 
 	private void sendDataSegment(byte[] data){
 //		System.out.println("creating segment with data:"+Arrays.toString(data));
-		RDTSegment seg = new RDTSegment();
-		seg.setData(data);
-		seg.seqNum = sndBuf.next;
+		RDTSegment seg = RDTSegment.createDataSegment(data,sndBuf.next);
 		sndBuf.putNext(seg);
 		if(seg.seqNum == sndBuf.base){
-			TimeoutHandler timeout = new TimeoutHandler(sndBuf, seg, socket, dst_ip, dst_port);
-			seg.timeoutHandler = timeout;
-			timer.schedule(timeout, RTO);
+			System.out.println("SEND: setting timeout for "+seg.seqNum);
+			seg.setTimeoutHandler(sndBuf, socket, dst_ip, dst_port);
 		}
-		System.out.printf("Sending segment SEQ:%d, LEN:%d\n",seg.seqNum, seg.length);
+		System.out.printf("SEND: Sending segment SEQ:%d, LEN:%d\n",seg.seqNum, seg.length);
 		Utility.udp_send(seg, socket, dst_ip, dst_port);
 	}
 	
@@ -126,80 +124,7 @@ public class RDT {
 		// you can use TCP-style connection termination process
 	}
 	
-}  // end RDT class 
-
-
-class RDTBuffer {
-	public RDTSegment[] buf;
-	public int size;	
-	public int base;
-	public int next;
-	public Semaphore semMutex; // for mutual execlusion
-	public Semaphore semFull; // #of full slots
-	public Semaphore semEmpty; // #of Empty slots
-	
-	RDTBuffer (int bufSize) {
-		buf = new RDTSegment[bufSize];
-		for (int i=0; i<bufSize; i++)
-			buf[i] = null;
-		size = bufSize;
-		base = next = 0;
-		semMutex = new Semaphore(1, true);
-		semFull =  new Semaphore(0, true);
-		semEmpty = new Semaphore(bufSize, true);
-	}
-
-	
-	
-	// Put a segment in the next available slot in the buffer
-	public void putNext(RDTSegment seg) {		
-		try {
-			semEmpty.acquire(); // wait for an empty slot 
-			semMutex.acquire(); // wait for mutex 
-
-			buf[next%size] = seg;
-			next++;  
-
-			semMutex.release();
-			semFull.release(); // increase #of full slots
-		} catch(InterruptedException e) {
-			System.out.println("Buffer put(): " + e);
-		}
-	}
-	
-	// return the next in-order segment
-	public RDTSegment getBase() {
-		try {
-			semFull.acquire();  // wait for full slot
-			semMutex.acquire(); // wait for mutex
-
-			RDTSegment seg = buf[base%size];
-			base++;
-
-			semMutex.release();
-			semEmpty.release(); // increase empty slots
-			return seg;
-		} catch(InterruptedException e) {
-			System.out.println("Buffer get(): " + e);
-		}
-		
-		return null;  // fix 
-	}
-	
-	// Put a segment in the *right* slot based on seg.seqNum
-	// used by receiver in Selective Repeat
-	public void putSeqNum (RDTSegment seg) {
-		// ***** compelte
-
-	}
-	
-	// for debugging
-	public void dump() {
-		System.out.println("Dumping the receiver buffer ...");
-		// Complete, if you want to 
-		
-	}
-} // end RDTBuffer class
+}  // end RDT class
 
 class ReceiverThread extends Thread {
 	RDTBuffer rcvBuf, sndBuf;
@@ -301,8 +226,18 @@ class ReceiverThread extends Thread {
 		//for each segment in send window, if sequence number is <= ACK, release it
 		while(sndBuf.base <= seg.ackNum){
 			System.out.printf("GBN ACK: ackNum %d base %d\n", seg.ackNum, sndBuf.base);
-			sndBuf.getBase();
+			RDTSegment old_seg = sndBuf.getBase();
+			if(old_seg != null && old_seg.timeoutHandler != null){
+				old_seg.timeoutHandler.cancel();
+			}
 		}
+
+		//reset timer for new base
+		RDTSegment new_base = sndBuf.accessBase();
+		if(new_base != null){
+			new_base.setTimeoutHandler(sndBuf, socket, dst_ip, dst_port);
+		}
+
 	}
 	
 //	 create a segment from received bytes 

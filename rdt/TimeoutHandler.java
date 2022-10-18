@@ -33,7 +33,16 @@ class TimeoutHandler extends TimerTask {
 		// complete 
 		switch(RDT.protocol){
 			case RDT.GBN:
-				
+				RDTSegment new_base = sndBuf.accessBase();
+				if(new_base != null){
+					System.out.println(System.currentTimeMillis()+ ":Resetting Timeout for seg: " + new_base.seqNum);
+					new_base.setTimeoutHandler(sndBuf, socket, ip, port);
+				}
+
+				for(RDTSegment resend_seg : sndBuf.accessActive()){
+					System.out.println(System.currentTimeMillis()+ ":resending seg: " + resend_seg.seqNum);
+					Utility.udp_send(resend_seg, socket, ip, port);
+				}
 				break;
 			case RDT.SR:
 				

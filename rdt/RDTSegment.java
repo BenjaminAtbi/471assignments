@@ -51,6 +51,13 @@ public class RDTSegment {
 		ack.flags = ack.flags | FLAGS_ACK;
 		return ack;
 	}
+
+	public static RDTSegment createDataSegment(byte[] data, int seqNum){
+		RDTSegment seg = new RDTSegment();
+		seg.setData(data);
+		seg.seqNum = seqNum;
+		return seg;
+	}
 	
 	public boolean containsAck() {
 		return FLAGS_ACK == (flags & FLAGS_ACK) ;
@@ -107,6 +114,12 @@ public class RDTSegment {
 		return HDR_SIZE + length;
 	}
 
+	public void setTimeoutHandler(RDTBuffer segBuf, DatagramSocket socket, InetAddress ip, int port){
+		TimeoutHandler timeout = new TimeoutHandler(segBuf, this, socket, ip, port);
+		if(timeoutHandler != null) timeoutHandler.cancel();
+		timeoutHandler = timeout;
+		RDT.timer.schedule(timeout, RDT.RTO);
+	}
 
 	public String toString(){
 		return "SeqNum: " + seqNum + " ackNum: " + ackNum + " flags: " +  flags + " checksum: " + checksum +
