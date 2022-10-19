@@ -1,5 +1,5 @@
 /**
- * @author mhefeeda
+ * @author Benjamin Atbi
  *
  */
 
@@ -45,7 +45,8 @@ class TimeoutHandler extends TimerTask {
 				}
 				break;
 			case RDT.SR:
-				
+				seg.setTimeoutHandler(sndBuf, socket, ip, port);
+				Utility.udp_send(seg, socket, ip, port);
 				break;
 			default:
 				System.out.println("Error in TimeoutHandler:run(): unknown protocol");

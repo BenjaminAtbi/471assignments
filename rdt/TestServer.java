@@ -1,5 +1,5 @@
 /**
- * @author mohamed
+ * @author Benjamin Atbi
  *
  */
 
@@ -32,8 +32,8 @@ public class TestServer {
 
 	private static void scenario1(String hostname, int dst_port, int local_port) {
 
-		RDT rdt = new RDT(hostname, dst_port, local_port, 3, 3, RDT.GBN);
-		RDT.setLossRate(0.3);
+		RDT rdt = new RDT(hostname, dst_port, local_port, 3, 5, RDT.SR);
+		RDT.setLossRate(0.6);
 		byte[] buf = new byte[500];
 		System.out.println("Server is waiting to receive ... ");
 

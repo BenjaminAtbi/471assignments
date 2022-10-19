@@ -1,5 +1,5 @@
 /**
- * @author mohamed
+ * @author Benjamin Atbi
  *
  */
 
@@ -35,8 +35,8 @@ public class TestClient {
 
 	public static void scenario1(String hostname, int dst_port, int local_port){
 
-		RDT rdt = new RDT(hostname, dst_port, local_port, 1, 3, RDT.GBN);
-		RDT.setLossRate(0.3);
+		RDT rdt = new RDT(hostname, dst_port, local_port, 5, 5, RDT.SR);
+		RDT.setLossRate(0.6);
 
 		byte[] buf = new byte[RDT.MSS];
 		byte[] data = new byte[20];

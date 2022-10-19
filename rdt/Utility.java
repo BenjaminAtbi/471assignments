@@ -1,6 +1,6 @@
 /**
  * 
- * @author mohamed
+ * @author Benjamin Atbi
  *
  */
 package rdt;
