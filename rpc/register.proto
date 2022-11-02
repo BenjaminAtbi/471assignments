@@ -1,0 +1,69 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+package register_service;
+
+service RegisterService {
+    rpc GetAllRegisterArrays(google.protobuf.Empty) returns (Response) {}
+    rpc GetRegisterArray(GetRequest) returns (Response) {}
+    rpc CreateRegisterArray(CreateRequest) returns (Response) {}
+    rpc DeleteRegisterArray(DeleteRequest) returns (Response) {}
+    // Define the following two RPCs
+    // name: ReadValue, input: ReadItemRequest, output: Response
+    // name: WriteValue, input: WriteItemRequest, output: Response
+    rpc ReadValue(ReadItemRequest) returns (Response) {}
+    rpc WriteValue(WriteItemRequest) returns (Response) {}
+}
+
+message GetRequest {
+    string name = 1;
+}
+
+message DeleteRequest {
+    string name = 1;
+}
+
+message CreateRequest {
+    string name = 1;
+    // Task: Define the following field
+    // field: capacity, type: uint32
+    uint32 capacity = 2;
+}
+
+message ReadItemRequest {
+    // Task: Define the following fields
+    // field: name, type: string
+    // field: index, type: uint32
+    string name = 1;
+    uint32 index = 2;
+}
+
+message WriteItemRequest {
+    string name = 1;
+    uint32 index = 2;
+    uint32 value = 3;
+}
+
+message RegisterArray {
+    // Task: Define the following fields
+    // field: name, type: string
+    // field: capacity, type: uint32
+    // field: size, type: uint32
+    // field: items, type: list of uint32
+    string name = 1;
+    uint32 capacity = 2;
+    uint32 size = 3;
+    repeated uint32 items = 4;
+}
+
+message MultiRegisterArray {
+    repeated RegisterArray arrays = 1;
+}
+
+message Response {
+    oneof response {
+        uint32 value = 3;
+        MultiRegisterArray arrays = 4;
+    }
+}
+
