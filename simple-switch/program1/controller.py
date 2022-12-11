@@ -22,9 +22,8 @@ class Controller(object):
         self.controller.table_add("dmac", "forward", ['00:00:0a:00:00:04'], ['4'])
     
     def dump_table(self):
-        # TODO Use table_dump provider by self.controller
+        self.controller.table_dump("dmac")
         return None
-
 
 if __name__ == "__main__":
     import sys
